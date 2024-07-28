@@ -12,6 +12,10 @@ import io
 # Set page configuration
 st.set_page_config(page_title="Healthcare Dashboard")
 
+# File path for storing the patient data CSV
+csv_file_path = 'patient_data.csv'
+
+# Function to extract text from PDF
 def extract_text_from_pdf(file):
     pdf = PdfReader(file)
     text = ''
@@ -19,6 +23,7 @@ def extract_text_from_pdf(file):
         text += page.extract_text()
     return text
 
+# Function to summarize text
 def summarize_text(text, model, temperature=0.1, top_p=0.9, max_length=120, chunk_size=4000):
     chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
     summaries = []
@@ -29,10 +34,26 @@ def summarize_text(text, model, temperature=0.1, top_p=0.9, max_length=120, chun
     final_summary = ' '.join(summaries)
     return final_summary
 
+# Function to answer query about text
 def answer_query_about_text(query, text, model, temperature=0.1, top_p=0.9, max_length=120):
     prompt = f"Please answer the following query based on the given text:\n\nText: {text}\n\nQuery: {query}\n\nAnswer:"
     output = replicate.run(model, input={"prompt": prompt, "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
     return ''.join(output)
+
+# Load existing patient data if available
+if os.path.exists(csv_file_path):
+    st.session_state.patient_data = pd.read_csv(csv_file_path)
+    st.session_state.patient_data['IndexNo'] = st.session_state.patient_data['IndexNo'].astype(str)
+else:
+    st.session_state.patient_data = pd.DataFrame(columns=[
+        'IndexNo', 'Age', 'RCRI score', 'Anemia category', 'PreopEGFRMDRD', 'Grade of Kidney Disease',
+        'Preoptransfusion within 30 days', 'Intraop', 'Postop within 30 days',
+        'Transfusion intra and postop', 'Transfusion Intra and Postop Category', 'Surgical Risk Category',
+        'Grade of Kidney Category', 'Anemia Category Binned', 'RDW15.7', 'ASA Category Binned',
+        'Gender', 'Anaesthesia Type', 'Surgery Priority', 'Race', 'Creatine RCRI Category',
+        'DM Insulin Category', 'CHF RCRI Category', 'IHD RCRI Category', 'CVA RCRI Category',
+        'Death Prediction', 'Death Probability', 'ICU Prediction', 'ICU Probability'
+    ])
 
 def main():
     st.title('Healthcare Dashboard')
@@ -48,6 +69,7 @@ def main():
             st.write('This chatbot is created using the open-source Llama 2 LLM model from Meta.')
             replicate_api = None
             api_token_error = False
+
             try:
                 if 'REPLICATE_API_TOKEN' in st.secrets:
                     st.success('API key already provided!', icon='✅')
@@ -74,6 +96,7 @@ def main():
                 temperature = st.slider('temperature', min_value=0.01, max_value=1.0, value=0.1, step=0.01)
                 top_p = st.slider('top_p', min_value=0.01, max_value=1.0, value=0.9, step=0.01)
                 max_length = st.slider('max_length', min_value=32, max_value=128, value=120, step=8)
+                st.markdown('📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-a-llama-2-chatbot/)!')
 
         # Store LLM generated responses
         if "messages" not in st.session_state:
@@ -163,18 +186,6 @@ def main():
         anemia_binned_mapping = {'none': 0, 'mild': 1, 'moderate/severe': 2}
         asa_mapping = {'I': 0, 'II': 1, 'III': 2, 'IV-VI': 3}
         rdw_mapping = {'<=15.7': 1, '>15.7': 0}
-
-        # Initialize patient data DataFrame
-        if 'patient_data' not in st.session_state:
-            st.session_state.patient_data = pd.DataFrame(columns=[
-                'IndexNo', 'Age', 'RCRI score', 'Anemia category', 'PreopEGFRMDRD', 'Grade of Kidney Disease',
-                'Preoptransfusion within 30 days', 'Intraop', 'Postop within 30 days',
-                'Transfusion intra and postop', 'Transfusion Intra and Postop Category', 'Surgical Risk Category',
-                'Grade of Kidney Category', 'Anemia Category Binned', 'RDW15.7', 'ASA Category Binned',
-                'Gender', 'Anaesthesia Type', 'Surgery Priority', 'Race', 'Creatine RCRI Category',
-                'DM Insulin Category', 'CHF RCRI Category', 'IHD RCRI Category', 'CVA RCRI Category',
-                'Death Prediction', 'Death Probability', 'ICU Prediction', 'ICU Probability'
-            ])
 
         with st.form(key='risk_form'):
             st.subheader("General Information")
@@ -321,6 +332,7 @@ def main():
                         'ICU Prediction': icu_prediction[0], 'ICU Probability': icu_prediction_proba[0][1]
                     }])
                     st.session_state.patient_data = pd.concat([st.session_state.patient_data, new_data], ignore_index=True)
+                    st.session_state.patient_data.to_csv(csv_file_path, index=False)
 
     with tab3:
         st.header("Patient Data")
@@ -340,20 +352,44 @@ def main():
                     with st.spinner("Processing data..."):
                         time.sleep(3)  # Simulating a 3-second delay, replace this with actual data processing
 
-                        # Writing the message after processing
-                        st.write("""
-                        Based on the data provided, here are recommendations for the doctor's communication with the patient's relatives:
+                        # Generating prompt for LLM
+                        patient_data_dict = patient_data.to_dict(orient='records')[0]
+                        patient_summary_prompt = f"""
+                        Here is the patient's data:
+                        Age: {patient_data_dict['Age']}
+                        RCRI score: {patient_data_dict['RCRI score']}
+                        Anemia category: {patient_data_dict['Anemia category']}
+                        PreopEGFRMDRD: {patient_data_dict['PreopEGFRMDRD']}
+                        Grade of Kidney Disease: {patient_data_dict['Grade of Kidney Disease']}
+                        Preoptransfusion within 30 days: {patient_data_dict['Preoptransfusion within 30 days']}
+                        Intraop: {patient_data_dict['Intraop']}
+                        Postop within 30 days: {patient_data_dict['Postop within 30 days']}
+                        Transfusion intra and postop: {patient_data_dict['Transfusion intra and postop']}
+                        Transfusion Intra and Postop Category: {patient_data_dict['Transfusion Intra and Postop Category']}
+                        Surgical Risk Category: {patient_data_dict['Surgical Risk Category']}
+                        Grade of Kidney Category: {patient_data_dict['Grade of Kidney Category']}
+                        Anemia Category Binned: {patient_data_dict['Anemia Category Binned']}
+                        RDW15.7: {patient_data_dict['RDW15.7']}
+                        ASA Category Binned: {patient_data_dict['ASA Category Binned']}
+                        Gender: {patient_data_dict['Gender']}
+                        Anaesthesia Type: {patient_data_dict['Anaesthesia Type']}
+                        Surgery Priority: {patient_data_dict['Surgery Priority']}
+                        Race: {patient_data_dict['Race']}
+                        Creatine RCRI Category: {patient_data_dict['Creatine RCRI Category']}
+                        DM Insulin Category: {patient_data_dict['DM Insulin Category']}
+                        CHF RCRI Category: {patient_data_dict['CHF RCRI Category']}
+                        IHD RCRI Category: {patient_data_dict['IHD RCRI Category']}
+                        CVA RCRI Category: {patient_data_dict['CVA RCRI Category']}
+                        Death Prediction: {patient_data_dict['Death Prediction']}
+                        Death Probability: {patient_data_dict['Death Probability']}
+                        ICU Prediction: {patient_data_dict['ICU Prediction']}
+                        ICU Probability: {patient_data_dict['ICU Probability']}
 
-                        1. **Assure Them of Low Surgical Risk:** The patient falls into the low surgical risk category based on the provided data, indicating that the surgery was likely considered safe.
-                        2. **Provide Reassurance Regarding Mortality Risk:** Although there is a mention of 30-day mortality, the actual mortality rate for the patient is relatively low (12%). The doctor should provide reassurance based on this information.
-                        3. **Discuss Anemia and Transfusion Status:** Since the patient has no reported anemia and did not require any transfusion preoperatively, intraoperatively, or postoperatively, the doctor can highlight this as a positive aspect of the patient's health status.
-                        4. **Explain the Presence of Comorbidities:** There are several comorbidities present in the patient's medical history, including cardiovascular disease, ischemic heart disease, congestive heart failure, and diabetes mellitus requiring insulin. The doctor should explain these conditions and how they may have been managed during the surgery.
-                        5. **Clarify Kidney Health:** Although the patient has Grade 1 kidney disease and an elevated creatinine level, further clarification from the doctor regarding the impact of these conditions on the surgery outcome would be beneficial for the relatives' understanding.
-                        6. **Discuss Anesthesia and Priority:** General anesthesia was administered, and the surgery was categorized as elective. The doctor can explain why these decisions were made and reassure the relatives about the safety measures taken.
-                        7. **Offer to Address Any Concerns:** Finally, the doctor should offer to address any questions or concerns the relatives may have regarding the surgery, the patient's condition, or the postoperative care plan.
+                        Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
+                        """
 
-                        Overall, the doctor's communication should aim to provide clarity, reassurance, and an opportunity for the relatives to ask questions or seek further information.
-                        """)
+                        summary = generate_llama2_response(patient_summary_prompt)
+                        st.write(summary)
 
             else:
                 st.write("No data found for the entered Index Number.")
