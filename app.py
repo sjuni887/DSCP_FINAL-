@@ -10,7 +10,7 @@ from PyPDF2 import PdfReader
 import io
 
 # Set page configuration
-st.set_page_config(page_title="Healthcare Dashboard")
+st.set_page_config(page_title="Healthcare Dashboard", layout="wide")
 
 # File path for storing the patient data CSV
 csv_file_path = 'patient_data.csv'
@@ -29,7 +29,7 @@ def summarize_text(text, model, temperature=0.1, top_p=0.9, max_length=120, chun
     summaries = []
     for chunk in chunks:
         prompt = f"Please summarize the following text:\n\n{chunk}\n\nSummary:"
-        output = replicate.run(model, input={"prompt": prompt, "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
+        output = replicate.run(model, input={"prompt": prompt, "temperature": temperature, "top_p": top_p, "max_length": max_length})
         summaries.append(''.join(output))
     final_summary = ' '.join(summaries)
     return final_summary
@@ -37,7 +37,7 @@ def summarize_text(text, model, temperature=0.1, top_p=0.9, max_length=120, chun
 # Function to answer query about text
 def answer_query_about_text(query, text, model, temperature=0.1, top_p=0.9, max_length=120):
     prompt = f"Please answer the following query based on the given text:\n\nText: {text}\n\nQuery: {query}\n\nAnswer:"
-    output = replicate.run(model, input={"prompt": prompt, "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
+    output = replicate.run(model, input={"prompt": prompt, "temperature": temperature, "top_p": top_p, "max_length": max_length})
     return ''.join(output)
 
 # Function for generating LLaMA2 response. Refactored from https://github.com/a16z-infra/llama2-chatbot
@@ -48,7 +48,7 @@ def generate_llama2_response(prompt_input, llm, temperature, top_p, max_length):
             string_dialogue += "User: " + dict_message["content"] + "\n\n"
         else:
             string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
-    output = replicate.run(llm, input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ", "temperature": temperature, "top_p": top_p, "max_length": max_length, "repetition_penalty": 1})
+    output = replicate.run(llm, input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ", "temperature": temperature, "top_p": top_p, "max_length": max_length})
     return output
 
 # Load existing patient data if available
@@ -63,7 +63,8 @@ else:
         'Grade of Kidney Category', 'Anemia Category Binned', 'RDW15.7', 'ASA Category Binned',
         'Gender', 'Anaesthesia Type', 'Surgery Priority', 'Race', 'Creatine RCRI Category',
         'DM Insulin Category', 'CHF RCRI Category', 'IHD RCRI Category', 'CVA RCRI Category',
-        'Death Prediction', 'Death Probability', 'ICU Prediction', 'ICU Probability'
+        'Death Prediction', 'Death Probability', 'ICU Prediction', 'ICU Probability',
+        'Income Category', 'Loneliness'
     ])
 
 def main():
@@ -183,7 +184,7 @@ def main():
         st.header("Data Visualization")
         power_bi_url = "https://app.powerbi.com/reportEmbed?reportId=7ca96589-22e3-465d-9f5c-af24869867b4&autoAuth=true&ctid=cba9e115-3016-4462-a1ab-a565cba0cdf1"
         st.markdown(f"""
-            <iframe width="170%" height="700" src="{power_bi_url}" frameborder="0" allowfullscreen="true"></iframe>
+            <iframe width="100%" height="700" src="{power_bi_url}" frameborder="0" allowfullscreen="true"></iframe>
         """, unsafe_allow_html=True)
 
     elif st.session_state.page == "patient_data":
@@ -248,10 +249,19 @@ def main():
                     ihd_rcri = st.selectbox('IHD RCRI Category', ['Yes', 'No'])
                     cva_rcri = st.selectbox('CVA RCRI Category', ['Yes', 'No'])
 
+                st.subheader("SDOH (Social Determinants of Health) 🌐")
+                sdoh_col1, sdoh_col2 = st.columns(2)
+                with sdoh_col1:
+                    income_category = st.selectbox('Income Category', ['Low Income', 'Median Income', 'High Income'])
+                with sdoh_col2:
+                    loneliness = st.selectbox('Loneliness', ['Low', 'Moderate', 'Severe'])
+
                 submit_add_button = st.form_submit_button(label='Add Patient Data')
 
             if submit_add_button:
-                if indexno in st.session_state.patient_data['IndexNo'].values:
+                if not indexno:
+                    st.error("Index Number is required. Please enter a valid Index Number.")
+                elif indexno in st.session_state.patient_data['IndexNo'].values:
                     st.error("This Index Number already exists. Please enter a new Index Number.")
                 else:
                     new_data = pd.DataFrame([{
@@ -263,7 +273,8 @@ def main():
                         'RDW15.7': rdw_15_7, 'ASA Category Binned': asa_category_binned, 'Gender': gender, 'Anaesthesia Type': anesthesia_type,
                         'Surgery Priority': surgery_priority, 'Race': race, 'Creatine RCRI Category': creatine_rcri, 'DM Insulin Category': dm_insulin,
                         'CHF RCRI Category': chf_rcri, 'IHD RCRI Category': ihd_rcri, 'CVA RCRI Category': cva_rcri,
-                        'Death Prediction': 0, 'Death Probability': 0.0, 'ICU Prediction': 0, 'ICU Probability': 0.0
+                        'Death Prediction': 0, 'Death Probability': 0.0, 'ICU Prediction': 0, 'ICU Probability': 0.0,
+                        'Income Category': income_category, 'Loneliness': loneliness
                     }])
                     st.session_state.patient_data = pd.concat([st.session_state.patient_data, new_data], ignore_index=True)
                     st.session_state.patient_data.to_csv(csv_file_path, index=False)
@@ -332,7 +343,15 @@ def main():
                             chf_rcri = st.selectbox('CHF RCRI Category', ['Yes', 'No'], index=['Yes', 'No'].index(patient_data['CHF RCRI Category'].values[0]))
                             ihd_rcri = st.selectbox('IHD RCRI Category', ['Yes', 'No'], index=['Yes', 'No'].index(patient_data['IHD RCRI Category'].values[0]))
                             cva_rcri = st.selectbox('CVA RCRI Category', ['Yes', 'No'], index=['Yes', 'No'].index(patient_data['CVA RCRI Category'].values[0]))
-                            submit_edit_button = st.form_submit_button(label='Save Changes')
+                        
+                        st.subheader("SDOH (Social Determinants of Health) 🌐")
+                        sdoh_col1, sdoh_col2 = st.columns(2)
+                        with sdoh_col1:
+                            income_category = st.selectbox('Income Category', ['Low Income', 'Median Income', 'High Income'], index=['Low Income', 'Median Income', 'High Income'].index(patient_data['Income Category'].values[0]))
+                        with sdoh_col2:
+                            loneliness = st.selectbox('Loneliness', ['Low', 'Moderate', 'Severe'], index=['Low', 'Moderate', 'Severe'].index(patient_data['Loneliness'].values[0]))
+                        
+                        submit_edit_button = st.form_submit_button(label='Save Changes')
 
                     if submit_edit_button:
                         st.session_state.patient_data.loc[st.session_state.patient_data['IndexNo'] == indexno, [
@@ -341,13 +360,14 @@ def main():
                             'Transfusion intra and postop', 'Transfusion Intra and Postop Category', 'Surgical Risk Category',
                             'Grade of Kidney Category', 'Anemia Category Binned', 'RDW15.7', 'ASA Category Binned',
                             'Gender', 'Anaesthesia Type', 'Surgery Priority', 'Race', 'Creatine RCRI Category',
-                            'DM Insulin Category', 'CHF RCRI Category', 'IHD RCRI Category', 'CVA RCRI Category']] = [
+                            'DM Insulin Category', 'CHF RCRI Category', 'IHD RCRI Category', 'CVA RCRI Category',
+                            'Income Category', 'Loneliness']] = [
                             age, rcri_score, anemia_category, preop_egfr, grade_kidney_disease,
                             preop_transfusion, intraop, postop_within_30days, transfusion_intra_postop,
                             transfusion_category, surg_risk_category, grade_kidney_category,
                             anemia_binned, rdw_15_7, asa_category_binned, gender, anesthesia_type,
                             surgery_priority, race, creatine_rcri, dm_insulin, chf_rcri,
-                            ihd_rcri, cva_rcri
+                            ihd_rcri, cva_rcri, income_category, loneliness
                         ]
                         st.session_state.patient_data.to_csv(csv_file_path, index=False)
                         st.success("Patient data updated successfully.")
@@ -360,10 +380,10 @@ def main():
         st.header("Risk Calculator")
 
         # Load the models
-        with open('rf_model_death.pkl', 'rb') as file:
+        with open('draft_log_reg_mortality.pkl', 'rb') as file:
             death_model = pickle.load(file)
 
-        with open('rf_model_icu.pkl', 'rb') as file:
+        with open('draft_log_reg_icu.pkl', 'rb') as file:
             icu_model = pickle.load(file)
 
         # Define mappings
@@ -374,6 +394,8 @@ def main():
         anemia_binned_mapping = {'none': 0, 'mild': 1, 'moderate/severe': 2}
         asa_mapping = {'I': 0, 'II': 1, 'III': 2, 'IV-VI': 3}
         rdw_mapping = {'<=15.7': 1, '>15.7': 0}
+        loneliness_mapping = {'Low': 0, 'Moderate': 1, 'Severe': 2}
+        income_mapping = {'Low Income': 0, 'Median Income': 1, 'High Income': 2}
 
         # Input Patient ID for Risk Calculation
         st.subheader("Calculate Risk for a Patient")
@@ -406,6 +428,8 @@ def main():
                 chf_rcri_mapped = 1 if patient_data['CHF RCRI Category'] == 'Yes' else 0
                 ihd_rcri_mapped = 1 if patient_data['IHD RCRI Category'] == 'Yes' else 0
                 cva_rcri_mapped = 1 if patient_data['CVA RCRI Category'] == 'Yes' else 0
+                loneliness_mapped = loneliness_mapping[patient_data['Loneliness']]
+                income_mapped = income_mapping[patient_data['Income Category']]
 
                 # Create input array for prediction
                 input_data = np.array([[
@@ -414,7 +438,7 @@ def main():
                     transfusion_category_mapped, surg_risk_category_mapped, grade_kidney_category_mapped,
                     anemia_binned_mapped, rdw_15_7_mapped, asa_category_binned_mapped, male_mapped, ga_mapped, emergency_mapped,
                     race_chinese, race_indian, race_malay, race_others, creatine_rcri_mapped, dm_insulin_mapped, chf_rcri_mapped,
-                    ihd_rcri_mapped, cva_rcri_mapped
+                    ihd_rcri_mapped, cva_rcri_mapped, income_mapped, loneliness_mapped
                 ]])
 
                 # Ensure input data is a 2D array
@@ -486,6 +510,8 @@ def main():
                         CHF RCRI Category: {patient_data['CHF RCRI Category']}
                         IHD RCRI Category: {patient_data['IHD RCRI Category']}
                         CVA RCRI Category: {patient_data['CVA RCRI Category']}
+                        Income Category: {patient_data['Income Category']}
+                        Loneliness: {patient_data['Loneliness']}
                         Death Prediction: {death_outcome_message}
                         Death Probability: {death_prediction_proba[0][1]:.2f}
                         ICU Prediction: {icu_outcome_message}

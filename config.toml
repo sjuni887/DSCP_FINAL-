@@ -1,0 +1,31 @@
+[theme]
+primaryColor = "#4CAF50"
+backgroundColor = "#F0F2F6"
+secondaryBackgroundColor = "#E0E0E0"
+textColor = "#333333"
+font = "sans serif"
+
+[layout]
+# Define the layout of the app
+wide = true
+
+[sidebar]
+# Set the width of the sidebar
+width = 300
+
+[tab]
+# Align tabs to the sidebar
+alignment = "left"
+
+[header]
+# Customize the header of the app
+title = "Healthcare Dashboard"
+subtitle = "An interactive dashboard for healthcare data management and analysis"
+
+[general]
+# Set the app's favicon
+favicon = "https://path-to-your-favicon/favicon.ico"
+
+[run]
+# Configure the file watcher
+watchFile = ["app.py"]
