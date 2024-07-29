@@ -5,3 +5,4 @@ scikit-learn
 replicate
 streamlit-mic-recorder
 PyPDF2
+lime

@@ -114,6 +114,14 @@ def main():
             max_length = st.slider('max_length', min_value=32, max_value=128, value=120, step=8)
             st.markdown('📖 Learn how to build this app in this [blog](https://blog.streamlit.io/how-to-build-a-llama-2-chatbot/)!')
 
+            st.subheader("Upload PDF for Analysis")
+            uploaded_file = st.file_uploader("📎", type="pdf", label_visibility="collapsed")
+            if uploaded_file:
+                text = extract_text_from_pdf(uploaded_file)
+                with st.spinner("Summarizing PDF..."):
+                    summary = summarize_text(text, llm, temperature, top_p, max_length)
+                    st.session_state.messages.append({"role": "assistant", "content": f"Summary of uploaded PDF:\n\n{summary}"})
+
     if "page" not in st.session_state:
         st.session_state.page = "chat"
 
@@ -134,51 +142,22 @@ def main():
         st.sidebar.button('Clear Chat History', on_click=clear_chat_history)
 
         # User-provided prompt
-        col1, col2 = st.columns([4,1])
+        col1, col2 = st.columns([4, 1])
         with col1:
             prompt = st.chat_input(disabled=not replicate_api)
         with col2:
             audio_text = speech_to_text(language='en', use_container_width=True, just_once=True, key='STT')
         
-        if audio_text:
-            prompt = audio_text
-
         if prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
 
-        # Generate a new response if last message is not from assistant
-        if st.session_state.messages[-1]["role"] != "assistant":
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
-                    response = generate_llama2_response(st.session_state.messages[-1]["content"], llm, temperature, top_p, max_length)
-                    placeholder = st.empty()
-                    full_response = ''.join(response)
-                    placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-        # Upload PDF and extract text
-        st.subheader("Upload PDF for Analysis")
-        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
-        if uploaded_file:
-            text = extract_text_from_pdf(uploaded_file)
-            st.text_area("Extracted Text", text, height=300)
-
-            # Summarize PDF text
-            if st.button("Summarize PDF"):
-                with st.spinner("Summarizing..."):
-                    summary = summarize_text(text, llm, temperature, top_p, max_length)
-                    st.write("Summary:")
-                    st.write(summary)
-
-            # Query PDF text
-            query = st.text_input("Ask a question about the PDF")
-            if st.button("Get Answer"):
-                with st.spinner("Generating answer..."):
-                    answer = answer_query_about_text(query, text, llm, temperature, top_p, max_length)
-                    st.write("Answer:")
-                    st.write(answer)
+                    response = generate_llama2_response(prompt, llm, temperature, top_p, max_length)
+                    st.write(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
     elif st.session_state.page == "visualization":
         st.header("Data Visualization")
@@ -450,15 +429,48 @@ def main():
                     death_prediction = death_model.predict(input_data)
                     death_prediction_proba = death_model.predict_proba(input_data)
 
-                    death_outcome_message = "Death expectancy in 30 days is likely" if death_prediction[0] == 1 else "Death expectancy in 30 days is unlikely"
-                    death_outcome_color = "red" if death_prediction[0] == 1 else "green"
+                    death_outcome_message = ""
+                    death_outcome_color = ""
+
+                    death_prob = death_prediction_proba[0][1]
+                    if death_prob <= 0.2:
+                        death_outcome_message = "Low risk of 30-day mortality"
+                        death_outcome_color = "green"
+                        death_action = "Regular monitoring and standard care"
+                    elif 0.2 < death_prob <= 0.4:
+                        death_outcome_message = "Moderate risk of 30-day mortality"
+                        death_outcome_color = "yellow"
+                        death_action = "Enhanced monitoring and consider additional interventions"
+                    elif 0.4 < death_prob <= 0.7:
+                        death_outcome_message = "High risk of 30-day mortality"
+                        death_outcome_color = "orange"
+                        death_action = "Intensive monitoring and prepare for potential critical interventions"
+                    else:
+                        death_outcome_message = "Very high risk of 30-day mortality"
+                        death_outcome_color = "red"
+                        death_action = "Immediate and intensive interventions, consider ICU admission and advanced life support measures"
 
                     # Prediction for ICU admission
                     icu_prediction = icu_model.predict(input_data)
                     icu_prediction_proba = icu_model.predict_proba(input_data)
 
-                    icu_outcome_message = "ICU admission is likely" if icu_prediction[0] == 1 else "ICU admission is unlikely"
-                    icu_outcome_color = "red" if icu_prediction[0] == 1 else "green"
+                    icu_outcome_message = ""
+                    icu_outcome_color = ""
+                    icu_action = ""
+
+                    icu_prob = icu_prediction_proba[0][1]
+                    if icu_prob <= 0.2:
+                        icu_outcome_message = "No need for ICU"
+                        icu_outcome_color = "green"
+                        icu_action = "Regular monitoring and standard care"
+                    elif 0.2 < icu_prob <= 0.7:
+                        icu_outcome_message = "Needs further assessment for ICU"
+                        icu_outcome_color = "yellow"
+                        icu_action = "Enhanced monitoring and consider ICU if condition worsens"
+                    else:
+                        icu_outcome_message = "ICU priority"
+                        icu_outcome_color = "red"
+                        icu_action = "Immediate ICU admission and intensive care"
 
                     # Display results side by side
                     col1, col2 = st.columns(2)
@@ -467,6 +479,7 @@ def main():
                             <div style='text-align: center; padding: 10px; border: 2px solid {death_outcome_color}; border-radius: 10px;'>
                                 <h2 style='color: {death_outcome_color};'>{death_outcome_message}</h2>
                                 <p><strong>Probability:</strong> {death_prediction_proba[0][1]:.2f}</p>
+                                <p><strong>Action:</strong> {death_action}</p>
                             </div>
                         """, unsafe_allow_html=True)
                     with col2:
@@ -474,6 +487,7 @@ def main():
                             <div style='text-align: center; padding: 10px; border: 2px solid {icu_outcome_color}; border-radius: 10px;'>
                                 <h2 style='color: {icu_outcome_color};'>{icu_outcome_message}</h2>
                                 <p><strong>Probability:</strong> {icu_prediction_proba[0][1]:.2f}</p>
+                                <p><strong>Action:</strong> {icu_action}</p>
                             </div>
                         """, unsafe_allow_html=True)
 
