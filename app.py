@@ -456,21 +456,22 @@ def main():
 
                     icu_outcome_message = ""
                     icu_outcome_color = ""
-                    icu_action = ""
 
                     icu_prob = icu_prediction_proba[0][1]
                     if icu_prob <= 0.2:
                         icu_outcome_message = "No need for ICU"
                         icu_outcome_color = "green"
-                        icu_action = "Regular monitoring and standard care"
+                        icu_action = "no ICU required"
+
                     elif 0.2 < icu_prob <= 0.7:
                         icu_outcome_message = "Needs further assessment for ICU"
                         icu_outcome_color = "yellow"
-                        icu_action = "Enhanced monitoring and consider ICU if condition worsens"
+                        icu_action = "Needs further assessment"
+
                     else:
                         icu_outcome_message = "ICU priority"
                         icu_outcome_color = "red"
-                        icu_action = "Immediate ICU admission and intensive care"
+                        icu_action = "ICU Priority"
 
                     # Display results side by side
                     col1, col2 = st.columns(2)
