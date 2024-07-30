@@ -53,7 +53,7 @@ def generate_llama2_response(prompt_input, llm, temperature, top_p, max_length):
         else:
             string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
     output = replicate.run(llm, input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ", "temperature": temperature, "top_p": top_p, "max_length": max_length})
-    return output
+    return ''.join(output)
 
 # Load existing patient data if available
 if os.path.exists(csv_file_path):
@@ -465,7 +465,7 @@ def main():
                     st.markdown(f"""
                         <div style='text-align: center; padding: 10px; border: 2px solid {death_outcome_color}; border-radius: 10px;'>
                             <h2 style='color: {death_outcome_color};'>{death_outcome_message}</h2>
-                            <p><strong>Probability:</strong> {death_prob:.2f}</p>
+                            <p><strong>Probability:</strong> {death_prediction_proba[0][1]:.2f}</p>
                             <p><strong>Action:</strong> {death_action}</p>
                         </div>
                     """, unsafe_allow_html=True)
@@ -473,12 +473,10 @@ def main():
                     st.markdown(f"""
                         <div style='text-align: center; padding: 10px; border: 2px solid {icu_outcome_color}; border-radius: 10px;'>
                             <h2 style='color: {icu_outcome_color};'>{icu_outcome_message}</h2>
-                            <p><strong>Probability:</strong> {icu_prob:.2f}</p>
+                            <p><strong>Probability:</strong> {icu_prediction_proba[0][1]:.2f}</p>
                             <p><strong>Action:</strong> {icu_action}</p>
                         </div>
                     """, unsafe_allow_html=True)
-
-                return death_outcome_message, death_prob, icu_outcome_message, icu_prob
 
         with calculator_tabs[0]:
             st.subheader("Calculate Risk for a Patient")
@@ -527,7 +525,7 @@ def main():
                     # Ensure input data is a 2D array
                     input_data = input_data.reshape(1, -1)
 
-                    death_outcome_message, death_prob, icu_outcome_message, icu_prob = risk_calculation(input_data)
+                    risk_calculation(input_data)
 
                     # Generate Summary and Recommendations
                     st.subheader("Summary and Recommendations")
@@ -565,9 +563,9 @@ def main():
                             Income Category: {patient_data['Income Category']}
                             Loneliness: {patient_data['Loneliness']}
                             Death Prediction: {death_outcome_message}
-                            Death Probability: {death_prob:.2f}
+                            Death Probability: {death_prediction_proba[0][1]:.2f}
                             ICU Prediction: {icu_outcome_message}
-                            ICU Probability: {icu_prob:.2f}
+                            ICU Probability: {icu_prediction_proba[0][1]:.2f}
 
                             Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
                             """
@@ -680,7 +678,7 @@ def main():
                 # Ensure input data is a 2D array
                 input_data = input_data.reshape(1, -1)
 
-                death_outcome_message, death_prob, icu_outcome_message, icu_prob = risk_calculation(input_data)
+                risk_calculation(input_data)
 
         with calculator_tabs[2]:
             if 'patient_data' not in st.session_state:
