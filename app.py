@@ -563,7 +563,7 @@ def main():
                             Income Category: {patient_data['Income Category']}
                             Loneliness: {patient_data['Loneliness']}
 
-                            Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
+                            Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives, write a sample prompt to say to them.
                             """
 
                             summary = generate_llama2_response(patient_summary_prompt, llm, temperature, top_p, max_length)
