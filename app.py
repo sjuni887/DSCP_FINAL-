@@ -121,7 +121,12 @@ def main():
             st.subheader("Upload PDF for Analysis")
             uploaded_file = st.file_uploader("📎", type="pdf", label_visibility="collapsed")
             if uploaded_file:
-                text = extract_text_from_pdf(uploaded_file)
+                if 'pdf_text' not in st.session_state:
+                    text = extract_text_from_pdf(uploaded_file)
+                    st.session_state.pdf_text = text
+                else:
+                    text = st.session_state.pdf_text
+
                 with st.spinner("Summarizing PDF..."):
                     summary = summarize_text(text, llm, temperature, top_p, max_length)
                     st.session_state.messages.append({"role": "assistant", "content": f"Summary of uploaded PDF:\n\n{summary}"})
@@ -152,7 +157,19 @@ def main():
         with col2:
             audio_text = speech_to_text(language='en', use_container_width=True, just_once=True, key='STT')
         
-        if prompt:
+        if audio_text:
+            prompt = audio_text
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = generate_llama2_response(prompt, llm, temperature, top_p, max_length)
+                    st.write(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
+        elif prompt:
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.write(prompt)
@@ -360,6 +377,8 @@ def main():
                         st.session_state.patient_data = st.session_state.patient_data[st.session_state.patient_data['IndexNo'] != indexno]
                         st.session_state.patient_data.to_csv(csv_file_path, index=False)
                         st.success("Patient data deleted successfully.")
+                else:
+                    st.error("Index Number does not exist. Please enter a valid Index Number.")
 
         with patient_tab[2]:
             st.subheader("View All Patient Data")
@@ -446,7 +465,7 @@ def main():
                     st.markdown(f"""
                         <div style='text-align: center; padding: 10px; border: 2px solid {death_outcome_color}; border-radius: 10px;'>
                             <h2 style='color: {death_outcome_color};'>{death_outcome_message}</h2>
-                            <p><strong>Probability:</strong> {death_prediction_proba[0][1]:.2f}</p>
+                            <p><strong>Probability:</strong> {death_prob:.2f}</p>
                             <p><strong>Action:</strong> {death_action}</p>
                         </div>
                     """, unsafe_allow_html=True)
@@ -454,10 +473,12 @@ def main():
                     st.markdown(f"""
                         <div style='text-align: center; padding: 10px; border: 2px solid {icu_outcome_color}; border-radius: 10px;'>
                             <h2 style='color: {icu_outcome_color};'>{icu_outcome_message}</h2>
-                            <p><strong>Probability:</strong> {icu_prediction_proba[0][1]:.2f}</p>
+                            <p><strong>Probability:</strong> {icu_prob:.2f}</p>
                             <p><strong>Action:</strong> {icu_action}</p>
                         </div>
                     """, unsafe_allow_html=True)
+
+                return death_outcome_message, death_prob, icu_outcome_message, icu_prob
 
         with calculator_tabs[0]:
             st.subheader("Calculate Risk for a Patient")
@@ -506,7 +527,7 @@ def main():
                     # Ensure input data is a 2D array
                     input_data = input_data.reshape(1, -1)
 
-                    risk_calculation(input_data)
+                    death_outcome_message, death_prob, icu_outcome_message, icu_prob = risk_calculation(input_data)
 
                     # Generate Summary and Recommendations
                     st.subheader("Summary and Recommendations")
@@ -544,9 +565,9 @@ def main():
                             Income Category: {patient_data['Income Category']}
                             Loneliness: {patient_data['Loneliness']}
                             Death Prediction: {death_outcome_message}
-                            Death Probability: {death_prediction_proba[0][1]:.2f}
+                            Death Probability: {death_prob:.2f}
                             ICU Prediction: {icu_outcome_message}
-                            ICU Probability: {icu_prediction_proba[0][1]:.2f}
+                            ICU Probability: {icu_prob:.2f}
 
                             Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
                             """
@@ -659,7 +680,7 @@ def main():
                 # Ensure input data is a 2D array
                 input_data = input_data.reshape(1, -1)
 
-                risk_calculation(input_data)
+                death_outcome_message, death_prob, icu_outcome_message, icu_prob = risk_calculation(input_data)
 
         with calculator_tabs[2]:
             if 'patient_data' not in st.session_state:
@@ -689,12 +710,12 @@ def main():
             with explanation_tabs[0]:
                 st.subheader("ICU Model")
                 st.write("Feature importances are a measure of how much each feature (or variable) in a dataset contributes to the prediction power of a machine learning model. They provide insight into which features are most influential in making predictions and can help to interpret the model's behavior. High feature importance means that a feature has a strong impact on the model's predictions, whereas low importance indicates a lesser influence. By analyzing feature importances, you can understand which aspects of the data are driving the model's decisions, and it can also help in feature selection, simplifying the model without sacrificing performance.")
-                st.bar_chart(icu_df.set_index('Feature'),horizontal=True)
+                st.bar_chart(icu_df.set_index('Feature'), horizontal=True)
 
             with explanation_tabs[1]:
                 st.subheader("Mortality Model")
                 st.write("Feature importances are a measure of how much each feature (or variable) in a dataset contributes to the prediction power of a machine learning model. They provide insight into which features are most influential in making predictions and can help to interpret the model's behavior. High feature importance means that a feature has a strong impact on the model's predictions, whereas low importance indicates a lesser influence. By analyzing feature importances, you can understand which aspects of the data are driving the model's decisions, and it can also help in feature selection, simplifying the model without sacrificing performance.")
-                st.bar_chart(mortality_df.set_index('Feature'),horizontal=True)
+                st.bar_chart(mortality_df.set_index('Feature'), horizontal=True)
 
 if __name__ == "__main__":
     main()
