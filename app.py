@@ -556,6 +556,7 @@ def main():
                     age = st.number_input('Age', min_value=0, max_value=120, step=1)
                     rcri_score = st.number_input('RCRI score', min_value=0, max_value=10, step=1)
                     gender = st.selectbox('Gender', ['Male', 'Female'])
+                with general_info_col2:
                     race = st.selectbox('Race', ['Chinese', 'Indian', 'Malay', 'Others'])
                     surgery_priority = st.selectbox('Surgery Priority', ['Elective', 'Emergency'])
                     anesthesia_type = st.selectbox('Anaesthesia Type', ['GA', 'RA'])
