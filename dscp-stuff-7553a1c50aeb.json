@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "dscp-stuff",
+  "private_key_id": "7553a1c50aebda7d187fe354b36f66c22d460a1e",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCcRVIM0WL/kZw2\n3dF5c2vWJBlcks3rtygq19dEgRcqV/Tjbk0ZG2pKE+U2ttWKALE0XmWB5K+xJJL2\nnoQmAtzfhe4kEEW++aFTwVhA5OG6/m5bSPjMIxXRsQQXxcAd6NH5pA+3SCMyi1oJ\nJKbByjpDqcy7B13cIVBGkHfZG/UZueZo4k373P/jDtMCLO86fkxBZyOnT4fhoY71\nuYjTWFB9y1OO/G3Vafx/gaWrikKbM62JRTs343MRlrBBqq+tOgWcdwN0uCPmp0i2\nbwG/jd8/Xzh80+B4/qngKgAGGrTza/RAXBE23t0BAwGZb2ArWQTYPaEDT8pEKRYa\nUK2prFFDAgMBAAECggEAOZn/tYPU5vloSH0ZAph97lAeHRZr2vAHWUt4KOMgg9Yq\nCU8WEiQd2LJesf1Q1u6MYw5MgkWmUTh3B3rEoTI68hVvA1IQM2XWhoXlHv5/CitQ\nyEsskip4l3OVW6Hjv+Kay1cjB98KQk5FYMtmwFXnhhtnwKTlfwe0jF4iHyAEB3gA\nG92AeL40IP0yZgS/QnSADf4tBFIpA4j1xtjAWJkfhkO9t+1K7K5MYHzI9c8omEI1\nF9w9Frt5lEIpr0bpLGTCy65jV1S/15z7/+7oFD1uNvGAwJVwXggBFLnyyVUqW9rK\ne+1rkGIZBBCBOGl7hyp4oeiCo5nQnRpN6fmrzEtYiQKBgQDPzI/mgyx/ldYu3L9V\nzqIt/zdX6q+BJy/bYgku5fxe8GngNFuGknD9Y6fa+IDHezEHBzTTAXmAtjmufwJt\n8Tq1PDOfTIQm87XeSKXU+QjBbN/5JtFES1gHQ97YyH/hu66rtozUDp+CeJTcmmik\nxvFJYBGtjgt2DhZ8BCtiNcwwTwKBgQDAhO1VcVlULBniM7OBzDaioqQqR/JM7aaZ\noEXd/NDSAq4Jq5TdybG9R8Znjg/IN152ShiUAv1UzGW1OMIhdlTCIkGZnO6Nbefk\nkGiJoLl2aX2xXMpcIjOsjb48KCVLEBfYOw0UbFFas2WfCTwUZHVMjbmkbAK38ZU5\nfR/cVwG+zQKBgQCTwviIh7o6t0doZ1w/HgJBBvxJrf5CrqTfMWUqTiwZLod7AIAc\nv0FNTXHsyUx5jOYeA0fSy3ekyO9XX8VQfHqsqTRkEDrgn+gxOiOBv9wz/sF9H9cq\n4xCjieWK7XfSAm2AePzHReazFh90hu/mS/kDniaz7Q/FUNs4MJbQ7URXDQKBgG3A\nGdC40pTyozraAH6BXbAviej0pQQIAw7XWJ0pkB35GyA2KaKaZfIi5c+JJCQetII4\n0XQnlCXwdBbwqXMME1uszbr1xOTpf+ZEEORMtQ31K4ud+1q0wMKg948xz7jQDtfd\nKiK3cVWEqe0VBaQWdOxUaz15ub8FQO3KEAy7qSoNAoGAB1NwI9Wbpu4nrLJzvaXG\n/bRVUNMFD/czZ/sGpvd36lFaSHy5oWMVuEkcP5DawyyEHtbQFi0DhmIg/3Xc+ITM\nnx6nXEIzXExtVUOyIvRbaK3xQGd4u0tss+HjfzqELFdYaLO9H1PewlYNsupTaLFm\n65ex05Ijmc5fkbRT+0ngzXA=\n-----END PRIVATE KEY-----\n",
+  "client_email": "dscp-957@dscp-stuff.iam.gserviceaccount.com",
+  "client_id": "116962934469256691600",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/dscp-957%40dscp-stuff.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

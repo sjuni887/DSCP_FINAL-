@@ -1,3 +1,4 @@
 IndexNo,Age,RCRI score,Anemia category,PreopEGFRMDRD,Grade of Kidney Disease,Preoptransfusion within 30 days,Intraop,Postop within 30 days,Transfusion intra and postop,Transfusion Intra and Postop Category,Surgical Risk Category,Grade of Kidney Category,Anemia Category Binned,RDW15.7,ASA Category Binned,Gender,Anaesthesia Type,Surgery Priority,Race,Creatine RCRI Category,DM Insulin Category,CHF RCRI Category,IHD RCRI Category,CVA RCRI Category,Death Prediction,Death Probability,ICU Prediction,ICU Probability,Income Category,Loneliness
 127,0,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low
 30007,39,0,none,63,G2,21,1,0,1,1 unit,Low,G2,none,>15.7,IV-VI,Male,GA,Elective,Others,No,No,No,Yes,Yes,0,0.0,0,0.0,Median Income,Moderate
+124,0,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low
