@@ -562,10 +562,6 @@ def main():
                             CVA RCRI Category: {patient_data['CVA RCRI Category']}
                             Income Category: {patient_data['Income Category']}
                             Loneliness: {patient_data['Loneliness']}
-                            Death Prediction: {death_outcome_message}
-                            Death Probability: {death_prediction_proba[0][1]:.2f}
-                            ICU Prediction: {icu_outcome_message}
-                            ICU Probability: {icu_prediction_proba[0][1]:.2f}
 
                             Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
                             """
