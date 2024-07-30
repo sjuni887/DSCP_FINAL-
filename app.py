@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 favicon_path = "chansey.png"
 
 # Set page configuration
-st.set_page_config(page_title="Healthcare Dashboard", layout="wide",page_icon="chansey.png")
+st.set_page_config(page_title="Healthcare Dashboard", layout="wide", page_icon=favicon_path)
 
 # File path for storing the patient data CSV
 csv_file_path = 'patient_data.csv'
@@ -366,10 +366,10 @@ def main():
         calculator_tabs = st.tabs(["Calculate Risk for a Patient", "Quick Calculation", "Model Explanation"])
 
         # Load the models
-        with open('draft_log_reg_mortality.pkl', 'rb') as file:
+        with open('FINAL_lr_mortality.pkl', 'rb') as file:
             death_model = pickle.load(file)
 
-        with open('draft_log_reg_icu.pkl', 'rb') as file:
+        with open('FINAL_gslr_ICU.pkl', 'rb') as file:
             icu_model = pickle.load(file)
 
         # Define mappings
@@ -547,6 +547,8 @@ def main():
 
                             summary = generate_llama2_response(patient_summary_prompt, llm, temperature, top_p, max_length)
                             st.write(summary)
+                else:
+                    st.error("Index Number does not exist. Please enter a valid Index Number.")
 
         with calculator_tabs[1]:
             st.subheader("Quick Calculation")
