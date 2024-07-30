@@ -6,3 +6,5 @@ replicate
 streamlit-mic-recorder
 PyPDF2
 lime
+matplotlib
+pdpbox 

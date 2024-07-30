@@ -8,9 +8,13 @@ import replicate
 from streamlit_mic_recorder import mic_recorder, speech_to_text
 from PyPDF2 import PdfReader
 import io
+from pdpbox import pdp, info_plots
+import matplotlib.pyplot as plt
+
+favicon_path = "chansey.png"
 
 # Set page configuration
-st.set_page_config(page_title="Healthcare Dashboard", layout="wide")
+st.set_page_config(page_title="Healthcare Dashboard", layout="wide",page_icon="chansey.png")
 
 # File path for storing the patient data CSV
 csv_file_path = 'patient_data.csv'
@@ -358,6 +362,9 @@ def main():
     elif st.session_state.page == "risk_calculator":
         st.header("Risk Calculator")
 
+        # Define the sub-tabs for risk calculator
+        calculator_tabs = st.tabs(["Calculate Risk for a Patient", "Quick Calculation", "Model Explanation"])
+
         # Load the models
         with open('draft_log_reg_mortality.pkl', 'rb') as file:
             death_model = pickle.load(file)
@@ -376,44 +383,264 @@ def main():
         loneliness_mapping = {'Low': 0, 'Moderate': 1, 'Severe': 2}
         income_mapping = {'Low Income': 0, 'Median Income': 1, 'High Income': 2}
 
-        # Input Patient ID for Risk Calculation
-        st.subheader("Calculate Risk for a Patient")
-        indexno_input = st.text_input("Enter Patient Index Number for Risk Calculation:")
-        if indexno_input:
-            patient_data = st.session_state.patient_data[st.session_state.patient_data['IndexNo'] == indexno_input]
-            if not patient_data.empty:
-                st.write("Patient Data:")
-                st.dataframe(patient_data)
-                patient_data = patient_data.iloc[0]
+        def risk_calculation(input_data):
+            with st.spinner('Processing...'):
+                time.sleep(3)
+                # Prediction for death
+                death_prediction = death_model.predict(input_data)
+                death_prediction_proba = death_model.predict_proba(input_data)
 
+                death_outcome_message = ""
+                death_outcome_color = ""
+
+                death_prob = death_prediction_proba[0][1]
+                if death_prob <= 0.2:
+                    death_outcome_message = "Low risk of 30-day mortality"
+                    death_outcome_color = "green"
+                    death_action = "Regular monitoring and standard care"
+                elif 0.2 < death_prob <= 0.4:
+                    death_outcome_message = "Moderate risk of 30-day mortality"
+                    death_outcome_color = "yellow"
+                    death_action = "Enhanced monitoring and consider additional interventions"
+                elif 0.4 < death_prob <= 0.7:
+                    death_outcome_message = "High risk of 30-day mortality"
+                    death_outcome_color = "orange"
+                    death_action = "Intensive monitoring and prepare for potential critical interventions"
+                else:
+                    death_outcome_message = "Very high risk of 30-day mortality"
+                    death_outcome_color = "red"
+                    death_action = "Immediate and intensive interventions, consider ICU admission and advanced life support measures"
+
+                # Prediction for ICU admission
+                icu_prediction = icu_model.predict(input_data)
+                icu_prediction_proba = icu_model.predict_proba(input_data)
+
+                icu_outcome_message = ""
+                icu_outcome_color = ""
+
+                icu_prob = icu_prediction_proba[0][1]
+                if icu_prob <= 0.2:
+                    icu_outcome_message = "No need for ICU"
+                    icu_outcome_color = "green"
+                    icu_action = "no ICU required"
+
+                elif 0.2 < icu_prob <= 0.7:
+                    icu_outcome_message = "Needs further assessment for ICU"
+                    icu_outcome_color = "yellow"
+                    icu_action = "Needs further assessment"
+
+                else:
+                    icu_outcome_message = "ICU priority"
+                    icu_outcome_color = "red"
+                    icu_action = "ICU Priority"
+
+                # Display results side by side
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown(f"""
+                        <div style='text-align: center; padding: 10px; border: 2px solid {death_outcome_color}; border-radius: 10px;'>
+                            <h2 style='color: {death_outcome_color};'>{death_outcome_message}</h2>
+                            <p><strong>Probability:</strong> {death_prediction_proba[0][1]:.2f}</p>
+                            <p><strong>Action:</strong> {death_action}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    st.markdown(f"""
+                        <div style='text-align: center; padding: 10px; border: 2px solid {icu_outcome_color}; border-radius: 10px;'>
+                            <h2 style='color: {icu_outcome_color};'>{icu_outcome_message}</h2>
+                            <p><strong>Probability:</strong> {icu_prediction_proba[0][1]:.2f}</p>
+                            <p><strong>Action:</strong> {icu_action}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        with calculator_tabs[0]:
+            st.subheader("Calculate Risk for a Patient")
+            indexno_input = st.text_input("Enter Patient Index Number for Risk Calculation:")
+            if indexno_input:
+                patient_data = st.session_state.patient_data[st.session_state.patient_data['IndexNo'] == indexno_input]
+                if not patient_data.empty:
+                    st.write("Patient Data:")
+                    st.dataframe(patient_data)
+                    patient_data = patient_data.iloc[0]
+
+                    # Mapping inputs
+                    anemia_category_mapped = anemia_mapping[patient_data['Anemia category']]
+                    grade_kidney_disease_mapped = grade_kidney_mapping[patient_data['Grade of Kidney Disease']]
+                    transfusion_category_mapped = transfusion_mapping[patient_data['Transfusion Intra and Postop Category']]
+                    surg_risk_category_mapped = surg_risk_mapping[patient_data['Surgical Risk Category']]
+                    grade_kidney_category_mapped = grade_kidney_mapping[patient_data['Grade of Kidney Category']]
+                    anemia_binned_mapped = anemia_binned_mapping[patient_data['Anemia Category Binned']]
+                    rdw_15_7_mapped = rdw_mapping[patient_data['RDW15.7']]
+                    asa_category_binned_mapped = asa_mapping[patient_data['ASA Category Binned']]
+                    male_mapped = 1 if patient_data['Gender'] == 'Male' else 0
+                    ga_mapped = 1 if patient_data['Anaesthesia Type'] == 'GA' else 0
+                    emergency_mapped = 1 if patient_data['Surgery Priority'] == 'Emergency' else 0
+                    race_chinese = 1 if patient_data['Race'] == 'Chinese' else 0
+                    race_indian = 1 if patient_data['Race'] == 'Indian' else 0
+                    race_malay = 1 if patient_data['Race'] == 'Malay' else 0
+                    race_others = 1 if patient_data['Race'] == 'Others' else 0
+                    creatine_rcri_mapped = 1 if patient_data['Creatine RCRI Category'] == 'Yes' else 0
+                    dm_insulin_mapped = 1 if patient_data['DM Insulin Category'] == 'Yes' else 0
+                    chf_rcri_mapped = 1 if patient_data['CHF RCRI Category'] == 'Yes' else 0
+                    ihd_rcri_mapped = 1 if patient_data['IHD RCRI Category'] == 'Yes' else 0
+                    cva_rcri_mapped = 1 if patient_data['CVA RCRI Category'] == 'Yes' else 0
+                    loneliness_mapped = loneliness_mapping[patient_data['Loneliness']]
+                    income_mapped = income_mapping[patient_data['Income Category']]
+
+                    # Create input array for prediction
+                    input_data = np.array([[
+                        patient_data['Age'], patient_data['RCRI score'], anemia_category_mapped, patient_data['PreopEGFRMDRD'], grade_kidney_disease_mapped,
+                        patient_data['Preoptransfusion within 30 days'], patient_data['Intraop'], patient_data['Postop within 30 days'], patient_data['Transfusion intra and postop'],
+                        transfusion_category_mapped, surg_risk_category_mapped, grade_kidney_category_mapped,
+                        anemia_binned_mapped, rdw_15_7_mapped, asa_category_binned_mapped, male_mapped, ga_mapped, emergency_mapped,
+                        race_chinese, race_indian, race_malay, race_others, creatine_rcri_mapped, dm_insulin_mapped, chf_rcri_mapped,
+                        ihd_rcri_mapped, cva_rcri_mapped, income_mapped, loneliness_mapped
+                    ]])
+
+                    # Ensure input data is a 2D array
+                    input_data = input_data.reshape(1, -1)
+
+                    risk_calculation(input_data)
+
+                    # Generate Summary and Recommendations
+                    st.subheader("Summary and Recommendations")
+                    if st.button("Generate Summary"):
+                        with st.spinner("Generating summary..."):
+                            time.sleep(3)  # Simulating a 3-second delay, replace this with actual data processing
+
+                            # Generating prompt for LLM
+                            patient_summary_prompt = f"""
+                            Here is the patient's data:
+                            Age: {patient_data['Age']}
+                            RCRI score: {patient_data['RCRI score']}
+                            Anemia category: {patient_data['Anemia category']}
+                            PreopEGFRMDRD: {patient_data['PreopEGFRMDRD']}
+                            Grade of Kidney Disease: {patient_data['Grade of Kidney Disease']}
+                            Preoptransfusion within 30 days: {patient_data['Preoptransfusion within 30 days']}
+                            Intraop: {patient_data['Intraop']}
+                            Postop within 30 days: {patient_data['Postop within 30 days']}
+                            Transfusion intra and postop: {patient_data['Transfusion intra and postop']}
+                            Transfusion Intra and Postop Category: {patient_data['Transfusion Intra and Postop Category']}
+                            Surgical Risk Category: {patient_data['Surgical Risk Category']}
+                            Grade of Kidney Category: {patient_data['Grade of Kidney Category']}
+                            Anemia Category Binned: {patient_data['Anemia Category Binned']}
+                            RDW15.7: {patient_data['RDW15.7']}
+                            ASA Category Binned: {patient_data['ASA Category Binned']}
+                            Gender: {patient_data['Gender']}
+                            Anaesthesia Type: {patient_data['Anaesthesia Type']}
+                            Surgery Priority: {patient_data['Surgery Priority']}
+                            Race: {patient_data['Race']}
+                            Creatine RCRI Category: {patient_data['Creatine RCRI Category']}
+                            DM Insulin Category: {patient_data['DM Insulin Category']}
+                            CHF RCRI Category: {patient_data['CHF RCRI Category']}
+                            IHD RCRI Category: {patient_data['IHD RCRI Category']}
+                            CVA RCRI Category: {patient_data['CVA RCRI Category']}
+                            Income Category: {patient_data['Income Category']}
+                            Loneliness: {patient_data['Loneliness']}
+                            Death Prediction: {death_outcome_message}
+                            Death Probability: {death_prediction_proba[0][1]:.2f}
+                            ICU Prediction: {icu_outcome_message}
+                            ICU Probability: {icu_prediction_proba[0][1]:.2f}
+
+                            Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
+                            """
+
+                            summary = generate_llama2_response(patient_summary_prompt, llm, temperature, top_p, max_length)
+                            st.write(summary)
+
+        with calculator_tabs[1]:
+            st.subheader("Quick Calculation")
+            with st.form(key='quick_calc_form'):
+                general_info_col1, general_info_col2 = st.columns(2)
+                with general_info_col1:
+                    age = st.number_input('Age', min_value=0, max_value=120, step=1)
+                    rcri_score = st.number_input('RCRI score', min_value=0, max_value=10, step=1)
+                    gender = st.selectbox('Gender', ['Male', 'Female'])
+                    race = st.selectbox('Race', ['Chinese', 'Indian', 'Malay', 'Others'])
+                    surgery_priority = st.selectbox('Surgery Priority', ['Elective', 'Emergency'])
+                    anesthesia_type = st.selectbox('Anaesthesia Type', ['GA', 'RA'])
+
+                st.subheader("Anemia Related Features🩸")
+                anemia_col1, anemia_col2 = st.columns(2)
+                with anemia_col1:
+                    anemia_category = st.selectbox('Anemia category', ['none', 'mild', 'moderate', 'severe'])
+                    anemia_binned = st.selectbox('Anemia Category Binned', ['none', 'mild', 'moderate/severe'])
+                with anemia_col2:
+                    rdw_15_7 = st.selectbox('RDW15.7', ['<=15.7', '>15.7'])
+
+                st.subheader("Kidney Related Features 🩺")
+                kidney_col1, kidney_col2 = st.columns(2)
+                with kidney_col1:
+                    preop_egfr = st.number_input('PreopEGFRMDRD', min_value=0, max_value=1000, step=1)
+                    grade_kidney_disease = st.selectbox('Grade of Kidney Disease', ['G1', 'G2', 'G3', 'G4', 'G5'])
+                with kidney_col2:
+                    grade_kidney_category = st.selectbox('Grade of Kidney Category', ['G1', 'G2', 'G3', 'G4', 'G5'])
+                
+                st.subheader("Transfusion Related Features 💉")
+                transfusion_col1, transfusion_col2 = st.columns(2)
+                with transfusion_col1:
+                    preop_transfusion = st.number_input('Preoptransfusion within 30 days', min_value=0, max_value=10, step=1)
+                with transfusion_col2:
+                    transfusion_intra_postop = st.number_input('Transfusion intra and postop', min_value=0, max_value=10, step=1)
+                    transfusion_category = st.selectbox('Transfusion Intra and Postop Category', ['0 units', '1 unit', '2 or more units'])
+
+                st.subheader("Surgical and Postoperative Features 🏥")
+                surg_postop_col1, surg_postop_col2 = st.columns(2)
+                with surg_postop_col1:
+                    intraop = st.number_input('Intraop', min_value=0, max_value=10, step=1)
+                with surg_postop_col2:
+                    postop_within_30days = st.number_input('Postop within 30 days', min_value=0, max_value=10, step=1)
+
+                st.subheader("Risk Factors ⚠️")
+                risk_col1, risk_col2 = st.columns(2)
+                with risk_col1:
+                    surg_risk_category = st.selectbox('Surgical Risk Category', ['Low', 'Moderate', 'High'])
+                    asa_category_binned = st.selectbox('ASA Category Binned', ['I', 'II', 'III', 'IV-VI'])
+                with risk_col2:
+                    creatine_rcri = st.selectbox('Creatine RCRI Category', ['Yes', 'No'])
+                    dm_insulin = st.selectbox('DM Insulin Category', ['Yes', 'No'])
+                    chf_rcri = st.selectbox('CHF RCRI Category', ['Yes', 'No'])
+                    ihd_rcri = st.selectbox('IHD RCRI Category', ['Yes', 'No'])
+                    cva_rcri = st.selectbox('CVA RCRI Category', ['Yes', 'No'])
+
+                st.subheader("SDOH (Social Determinants of Health) 🌐")
+                sdoh_col1, sdoh_col2 = st.columns(2)
+                with sdoh_col1:
+                    income_category = st.selectbox('Income Category', ['Low Income', 'Median Income', 'High Income'])
+                with sdoh_col2:
+                    loneliness = st.selectbox('Loneliness', ['Low', 'Moderate', 'Severe'])
+
+                submit_quick_calc_button = st.form_submit_button(label='Calculate Risk')
+
+            if submit_quick_calc_button:
                 # Mapping inputs
-                anemia_category_mapped = anemia_mapping[patient_data['Anemia category']]
-                grade_kidney_disease_mapped = grade_kidney_mapping[patient_data['Grade of Kidney Disease']]
-                transfusion_category_mapped = transfusion_mapping[patient_data['Transfusion Intra and Postop Category']]
-                surg_risk_category_mapped = surg_risk_mapping[patient_data['Surgical Risk Category']]
-                grade_kidney_category_mapped = grade_kidney_mapping[patient_data['Grade of Kidney Category']]
-                anemia_binned_mapped = anemia_binned_mapping[patient_data['Anemia Category Binned']]
-                rdw_15_7_mapped = rdw_mapping[patient_data['RDW15.7']]
-                asa_category_binned_mapped = asa_mapping[patient_data['ASA Category Binned']]
-                male_mapped = 1 if patient_data['Gender'] == 'Male' else 0
-                ga_mapped = 1 if patient_data['Anaesthesia Type'] == 'GA' else 0
-                emergency_mapped = 1 if patient_data['Surgery Priority'] == 'Emergency' else 0
-                race_chinese = 1 if patient_data['Race'] == 'Chinese' else 0
-                race_indian = 1 if patient_data['Race'] == 'Indian' else 0
-                race_malay = 1 if patient_data['Race'] == 'Malay' else 0
-                race_others = 1 if patient_data['Race'] == 'Others' else 0
-                creatine_rcri_mapped = 1 if patient_data['Creatine RCRI Category'] == 'Yes' else 0
-                dm_insulin_mapped = 1 if patient_data['DM Insulin Category'] == 'Yes' else 0
-                chf_rcri_mapped = 1 if patient_data['CHF RCRI Category'] == 'Yes' else 0
-                ihd_rcri_mapped = 1 if patient_data['IHD RCRI Category'] == 'Yes' else 0
-                cva_rcri_mapped = 1 if patient_data['CVA RCRI Category'] == 'Yes' else 0
-                loneliness_mapped = loneliness_mapping[patient_data['Loneliness']]
-                income_mapped = income_mapping[patient_data['Income Category']]
+                anemia_category_mapped = anemia_mapping[anemia_category]
+                grade_kidney_disease_mapped = grade_kidney_mapping[grade_kidney_disease]
+                transfusion_category_mapped = transfusion_mapping[transfusion_category]
+                surg_risk_category_mapped = surg_risk_mapping[surg_risk_category]
+                grade_kidney_category_mapped = grade_kidney_mapping[grade_kidney_category]
+                anemia_binned_mapped = anemia_binned_mapping[anemia_binned]
+                rdw_15_7_mapped = rdw_mapping[rdw_15_7]
+                asa_category_binned_mapped = asa_mapping[asa_category_binned]
+                male_mapped = 1 if gender == 'Male' else 0
+                ga_mapped = 1 if anesthesia_type == 'GA' else 0
+                emergency_mapped = 1 if surgery_priority == 'Emergency' else 0
+                race_chinese = 1 if race == 'Chinese' else 0
+                race_indian = 1 if race == 'Indian' else 0
+                race_malay = 1 if race == 'Malay' else 0
+                race_others = 1 if race == 'Others' else 0
+                creatine_rcri_mapped = 1 if creatine_rcri == 'Yes' else 0
+                dm_insulin_mapped = 1 if dm_insulin == 'Yes' else 0
+                chf_rcri_mapped = 1 if chf_rcri == 'Yes' else 0
+                ihd_rcri_mapped = 1 if ihd_rcri == 'Yes' else 0
+                cva_rcri_mapped = 1 if cva_rcri == 'Yes' else 0
+                loneliness_mapped = loneliness_mapping[loneliness]
+                income_mapped = income_mapping[income_category]
 
                 # Create input array for prediction
                 input_data = np.array([[
-                    patient_data['Age'], patient_data['RCRI score'], anemia_category_mapped, patient_data['PreopEGFRMDRD'], grade_kidney_disease_mapped,
-                    patient_data['Preoptransfusion within 30 days'], patient_data['Intraop'], patient_data['Postop within 30 days'], patient_data['Transfusion intra and postop'],
+                    age, rcri_score, anemia_category_mapped, preop_egfr, grade_kidney_disease_mapped,
+                    preop_transfusion, intraop, postop_within_30days, transfusion_intra_postop,
                     transfusion_category_mapped, surg_risk_category_mapped, grade_kidney_category_mapped,
                     anemia_binned_mapped, rdw_15_7_mapped, asa_category_binned_mapped, male_mapped, ga_mapped, emergency_mapped,
                     race_chinese, race_indian, race_malay, race_others, creatine_rcri_mapped, dm_insulin_mapped, chf_rcri_mapped,
@@ -423,120 +650,42 @@ def main():
                 # Ensure input data is a 2D array
                 input_data = input_data.reshape(1, -1)
 
-                with st.spinner('Processing...'):
-                    time.sleep(3)
-                    # Prediction for death
-                    death_prediction = death_model.predict(input_data)
-                    death_prediction_proba = death_model.predict_proba(input_data)
+                risk_calculation(input_data)
 
-                    death_outcome_message = ""
-                    death_outcome_color = ""
+        with calculator_tabs[2]:
+            if 'patient_data' not in st.session_state:
+                st.session_state.patient_data = pd.DataFrame()  # or load your actual data here
 
-                    death_prob = death_prediction_proba[0][1]
-                    if death_prob <= 0.2:
-                        death_outcome_message = "Low risk of 30-day mortality"
-                        death_outcome_color = "green"
-                        death_action = "Regular monitoring and standard care"
-                    elif 0.2 < death_prob <= 0.4:
-                        death_outcome_message = "Moderate risk of 30-day mortality"
-                        death_outcome_color = "yellow"
-                        death_action = "Enhanced monitoring and consider additional interventions"
-                    elif 0.4 < death_prob <= 0.7:
-                        death_outcome_message = "High risk of 30-day mortality"
-                        death_outcome_color = "orange"
-                        death_action = "Intensive monitoring and prepare for potential critical interventions"
-                    else:
-                        death_outcome_message = "Very high risk of 30-day mortality"
-                        death_outcome_color = "red"
-                        death_action = "Immediate and intensive interventions, consider ICU admission and advanced life support measures"
+            # Ensure patient_data has the correct columns
+            icu_feature_names = icu_model.feature_names_in_
+            death_feature_names = death_model.feature_names_in_
 
-                    # Prediction for ICU admission
-                    icu_prediction = icu_model.predict(input_data)
-                    icu_prediction_proba = icu_model.predict_proba(input_data)
+            # Feature importances calculation
+            icu_feature_importances = pd.Series(icu_model.coef_[0], index=icu_feature_names)
+            death_feature_importances = pd.Series(death_model.coef_[0], index=death_feature_names)
 
-                    icu_outcome_message = ""
-                    icu_outcome_color = ""
+            icu_df = pd.DataFrame({
+                'Feature': icu_feature_importances.index,
+                'Importance': icu_feature_importances.values
+            })
 
-                    icu_prob = icu_prediction_proba[0][1]
-                    if icu_prob <= 0.2:
-                        icu_outcome_message = "No need for ICU"
-                        icu_outcome_color = "green"
-                        icu_action = "no ICU required"
+            mortality_df = pd.DataFrame({
+                'Feature': death_feature_importances.index,
+                'Importance': death_feature_importances.values
+            })
 
-                    elif 0.2 < icu_prob <= 0.7:
-                        icu_outcome_message = "Needs further assessment for ICU"
-                        icu_outcome_color = "yellow"
-                        icu_action = "Needs further assessment"
+            # Streamlit tabs setup
+            explanation_tabs = st.tabs(["ICU Model", "Mortality Model"])
 
-                    else:
-                        icu_outcome_message = "ICU priority"
-                        icu_outcome_color = "red"
-                        icu_action = "ICU Priority"
+            with explanation_tabs[0]:
+                st.subheader("ICU Model")
+                st.write("Feature importances are a measure of how much each feature (or variable) in a dataset contributes to the prediction power of a machine learning model. They provide insight into which features are most influential in making predictions and can help to interpret the model's behavior. High feature importance means that a feature has a strong impact on the model's predictions, whereas low importance indicates a lesser influence. By analyzing feature importances, you can understand which aspects of the data are driving the model's decisions, and it can also help in feature selection, simplifying the model without sacrificing performance.")
+                st.bar_chart(icu_df.set_index('Feature'),horizontal=True)
 
-                    # Display results side by side
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown(f"""
-                            <div style='text-align: center; padding: 10px; border: 2px solid {death_outcome_color}; border-radius: 10px;'>
-                                <h2 style='color: {death_outcome_color};'>{death_outcome_message}</h2>
-                                <p><strong>Probability:</strong> {death_prediction_proba[0][1]:.2f}</p>
-                                <p><strong>Action:</strong> {death_action}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-                    with col2:
-                        st.markdown(f"""
-                            <div style='text-align: center; padding: 10px; border: 2px solid {icu_outcome_color}; border-radius: 10px;'>
-                                <h2 style='color: {icu_outcome_color};'>{icu_outcome_message}</h2>
-                                <p><strong>Probability:</strong> {icu_prediction_proba[0][1]:.2f}</p>
-                                <p><strong>Action:</strong> {icu_action}</p>
-                            </div>
-                        """, unsafe_allow_html=True)
-
-                # Generate Summary and Recommendations
-                st.subheader("Summary and Recommendations")
-                if st.button("Generate Summary"):
-                    with st.spinner("Generating summary..."):
-                        time.sleep(3)  # Simulating a 3-second delay, replace this with actual data processing
-
-                        # Generating prompt for LLM
-                        patient_summary_prompt = f"""
-                        Here is the patient's data:
-                        Age: {patient_data['Age']}
-                        RCRI score: {patient_data['RCRI score']}
-                        Anemia category: {patient_data['Anemia category']}
-                        PreopEGFRMDRD: {patient_data['PreopEGFRMDRD']}
-                        Grade of Kidney Disease: {patient_data['Grade of Kidney Disease']}
-                        Preoptransfusion within 30 days: {patient_data['Preoptransfusion within 30 days']}
-                        Intraop: {patient_data['Intraop']}
-                        Postop within 30 days: {patient_data['Postop within 30 days']}
-                        Transfusion intra and postop: {patient_data['Transfusion intra and postop']}
-                        Transfusion Intra and Postop Category: {patient_data['Transfusion Intra and Postop Category']}
-                        Surgical Risk Category: {patient_data['Surgical Risk Category']}
-                        Grade of Kidney Category: {patient_data['Grade of Kidney Category']}
-                        Anemia Category Binned: {patient_data['Anemia Category Binned']}
-                        RDW15.7: {patient_data['RDW15.7']}
-                        ASA Category Binned: {patient_data['ASA Category Binned']}
-                        Gender: {patient_data['Gender']}
-                        Anaesthesia Type: {patient_data['Anaesthesia Type']}
-                        Surgery Priority: {patient_data['Surgery Priority']}
-                        Race: {patient_data['Race']}
-                        Creatine RCRI Category: {patient_data['Creatine RCRI Category']}
-                        DM Insulin Category: {patient_data['DM Insulin Category']}
-                        CHF RCRI Category: {patient_data['CHF RCRI Category']}
-                        IHD RCRI Category: {patient_data['IHD RCRI Category']}
-                        CVA RCRI Category: {patient_data['CVA RCRI Category']}
-                        Income Category: {patient_data['Income Category']}
-                        Loneliness: {patient_data['Loneliness']}
-                        Death Prediction: {death_outcome_message}
-                        Death Probability: {death_prediction_proba[0][1]:.2f}
-                        ICU Prediction: {icu_outcome_message}
-                        ICU Probability: {icu_prediction_proba[0][1]:.2f}
-
-                        Based on the above data, provide a summary and recommendations for the doctor to communicate with the patient's relatives.
-                        """
-
-                        summary = generate_llama2_response(patient_summary_prompt, llm, temperature, top_p, max_length)
-                        st.write(summary)
+            with explanation_tabs[1]:
+                st.subheader("Mortality Model")
+                st.write("Feature importances are a measure of how much each feature (or variable) in a dataset contributes to the prediction power of a machine learning model. They provide insight into which features are most influential in making predictions and can help to interpret the model's behavior. High feature importance means that a feature has a strong impact on the model's predictions, whereas low importance indicates a lesser influence. By analyzing feature importances, you can understand which aspects of the data are driving the model's decisions, and it can also help in feature selection, simplifying the model without sacrificing performance.")
+                st.bar_chart(mortality_df.set_index('Feature'),horizontal=True)
 
 if __name__ == "__main__":
     main()
