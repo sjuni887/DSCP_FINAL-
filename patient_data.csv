@@ -3,3 +3,5 @@ IndexNo,Age,RCRI score,Anemia category,PreopEGFRMDRD,Grade of Kidney Disease,Pre
 30007,39,0,none,63,G2,21,1,0,1,1 unit,Low,G2,none,>15.7,IV-VI,Male,GA,Elective,Others,No,No,No,Yes,Yes,0,0.0,0,0.0,Median Income,Moderate
 124,0,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low
 1246,0,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low
+127890,0,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low
+12789,37,0,none,0,G1,0,0,0,0,0 units,Low,G1,none,<=15.7,I,Male,GA,Elective,Chinese,Yes,Yes,Yes,Yes,Yes,0,0.0,0,0.0,Low Income,Low

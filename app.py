@@ -232,8 +232,8 @@ def main():
                 general_info_col1, general_info_col2 = st.columns(2)
                 with general_info_col1:
                     indexno = st.text_input('Index Number')
-                    age = st.number_input('Age', min_value=0, max_value=120, step=1)
-                    rcri_score = st.number_input('RCRI score', min_value=0, max_value=10, step=1)
+                    age = st.slider('Age', min_value=18, max_value=120, step=1)
+                    rcri_score = st.number_input('RCRI score', min_value=0, max_value=6, step=1)
                 with general_info_col2:
                     gender = st.selectbox('Gender', ['Male', 'Female'])
                     race = st.selectbox('Race', ['Chinese', 'Indian', 'Malay', 'Others'])
@@ -251,7 +251,7 @@ def main():
                 st.subheader("Kidney Related Features 🩺")
                 kidney_col1, kidney_col2 = st.columns(2)
                 with kidney_col1:
-                    preop_egfr = st.number_input('PreopEGFRMDRD', min_value=0, max_value=1000, step=1)
+                    preop_egfr = st.slider('PreopEGFRMDRD', min_value=0, max_value=1000, step=1)
                     grade_kidney_disease = st.selectbox('Grade of Kidney Disease', ['G1', 'G2', 'G3', 'G4', 'G5'])
                 with kidney_col2:
                     grade_kidney_category = st.selectbox('Grade of Kidney Category', ['G1', 'G2', 'G3', 'G4', 'G5'])
