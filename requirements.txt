@@ -11,3 +11,4 @@ pdpbox
 snowflake-connector-python
 oauth2client
 gspread
+google-api-python-client

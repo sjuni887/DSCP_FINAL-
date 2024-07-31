@@ -10,6 +10,8 @@ from PyPDF2 import PdfReader
 import io
 from pdpbox import pdp, info_plots
 import matplotlib.pyplot as plt
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 favicon_path = "chansey.png"
 
@@ -18,6 +20,17 @@ st.set_page_config(page_title="Healthcare Dashboard", layout="wide", page_icon=f
 
 # File path for storing the patient data CSV
 csv_file_path = 'patient_data.csv'
+
+# Load service account credentials
+SERVICE_ACCOUNT_FILE = 'dscp-stuff-7553a1c50aeb.json'
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+service = build('sheets', 'v4', credentials=credentials)
+
+# Spreadsheet ID
+SPREADSHEET_ID = '1p7UZTCvLdEsutXeYRa-BTsEcv0m74omkcNEwxF73MSo'
 
 # Function to extract text from PDF
 def extract_text_from_pdf(file):
@@ -54,6 +67,27 @@ def generate_llama2_response(prompt_input, llm, temperature, top_p, max_length):
             string_dialogue += "Assistant: " + dict_message["content"] + "\n\n"
     output = replicate.run(llm, input={"prompt": f"{string_dialogue} {prompt_input} Assistant: ", "temperature": temperature, "top_p": top_p, "max_length": max_length})
     return ''.join(output)
+
+# Function to update Google Sheets
+def update_google_sheets(dataframe):
+    # Clear existing data
+    range_all = 'Sheet1!A:Z'  # Adjust the range as per your sheet
+    service.spreadsheets().values().clear(spreadsheetId=SPREADSHEET_ID, range=range_all).execute()
+
+    # Prepare the data
+    rows = [dataframe.columns.values.tolist()] + dataframe.values.tolist()
+    body = {
+        'values': rows
+    }
+
+    # Update Google Sheets with new data
+    range_to_update = 'Sheet1!A1'  # Start at the first cell
+    service.spreadsheets().values().update(
+        spreadsheetId=SPREADSHEET_ID,
+        range=range_to_update,
+        valueInputOption='RAW',
+        body=body
+    ).execute()
 
 # Load existing patient data if available
 if os.path.exists(csv_file_path):
@@ -278,6 +312,7 @@ def main():
                     }])
                     st.session_state.patient_data = pd.concat([st.session_state.patient_data, new_data], ignore_index=True)
                     st.session_state.patient_data.to_csv(csv_file_path, index=False)
+                    update_google_sheets(st.session_state.patient_data)
                     st.success("Patient data added successfully.")
 
         with patient_tab[1]:
@@ -371,11 +406,13 @@ def main():
                             ihd_rcri, cva_rcri, income_category, loneliness
                         ]
                         st.session_state.patient_data.to_csv(csv_file_path, index=False)
+                        update_google_sheets(st.session_state.patient_data)
                         st.success("Patient data updated successfully.")
 
                     if delete_patient_button:
                         st.session_state.patient_data = st.session_state.patient_data[st.session_state.patient_data['IndexNo'] != indexno]
                         st.session_state.patient_data.to_csv(csv_file_path, index=False)
+                        update_google_sheets(st.session_state.patient_data)
                         st.success("Patient data deleted successfully.")
                 else:
                     st.error("Index Number does not exist. Please enter a valid Index Number.")
