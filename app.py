@@ -462,7 +462,7 @@ def main():
                     death_action = "Regular monitoring and standard care"
                 elif 0.2 < death_prob <= 0.4:
                     death_outcome_message = "Moderate risk of 30-day mortality"
-                    death_outcome_color = "yellow"
+                    death_outcome_color = "orange"
                     death_action = "Enhanced monitoring and consider additional interventions"
                 elif 0.4 < death_prob <= 0.7:
                     death_outcome_message = "High risk of 30-day mortality"
@@ -488,7 +488,7 @@ def main():
 
                 elif 0.2 < icu_prob <= 0.7:
                     icu_outcome_message = "Needs further assessment for ICU"
-                    icu_outcome_color = "yellow"
+                    icu_outcome_color = "orange"
                     icu_action = "Needs further assessment"
 
                 else:
